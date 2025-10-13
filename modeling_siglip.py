@@ -200,7 +200,7 @@ class SiglipVisionEmbeddings(nn.Module):
         patch_embeds = self.patch_embedding(pixel_values)  #Output: [Batch_Size, Embed_Dim, Num_Patch_H, Num_Patch_W]
         embeddings = patch_embeds.flatten(2) #Output: [Batch_Size, Embed_Dim, Num_Patch_H*Num_Patch_W]
         embeddings = embeddings.transpose(1, 2) #Output: [Batch_size, Num_Patches, Embed_Dim] where Num_Patches = Num_Patch_H*Num_Patch_W
-        # Here, the positional embedding can be leart during training the model
+        # Here, the positional embedding can be learnt during training the model
         embeddings = embeddings + self.position_embedding(self.position_ids) #Output: [Batch_Size, Num_Patches, Embed_Dim] 
         return embeddings
     
@@ -228,7 +228,7 @@ class SiglipVisionTransformer(nn.Module):
 
 
     
-class SiglipVisionModule(nn.Module):
+class SiglipVisionModel(nn.Module):
 #The second block
     def __init__(self, config: SiglipVisionConfig):
         super().__init__()
