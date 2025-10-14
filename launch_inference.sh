@@ -1,6 +1,6 @@
 #!/bin/bash
 
-MODEL_PATH="google/paligemma-3b-pt-224"
+MODEL_PATH="~/projects/paligemma-weights/paligemma-3b-pt-224"
 PROMPT="Describe this building and its surrounding "
 IMAGE_FILE_PATH="./test1.jpg"
 MAX_TOKENS_TO_GENERATE=100
