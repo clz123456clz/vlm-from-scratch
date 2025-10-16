@@ -17,7 +17,7 @@ class KVCache():
             return 0
         else:
             # The shape of the kv_cache: [Batch_Size, Num_Heads_KV, Seq_len, Head_dim]
-            return self.key_cache[0].shape[-1]
+            return self.key_cache[0].shape[-2]
         
     def update(
             self,
@@ -92,7 +92,7 @@ class PaliGemmaConfig():
     ):
         super().__init__()
         self.ignore_index = ignore_index
-        self.imgae_token_index = image_token_index
+        self.image_token_index = image_token_index
         self.vocab_size = vocab_size
         self.projection_dim = projection_dim
         self.hidden_size = hidden_size
@@ -239,7 +239,7 @@ class GemmaAttention(nn.Module):
 
         self.rotary_embed = GemmaRotaryEmbedding(
             self.head_dim,
-            max_position_embedding = self.max_position_embeddings,
+            max_position_embeddings = self.max_position_embeddings,
             base = self.rope_theta,
         )
 
@@ -266,7 +266,7 @@ class GemmaAttention(nn.Module):
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
 
         # [Batch_Size, Seq_Len, Head_Dim], [Batch_Size, Seq_Len, Head_Dim]
-        cos, sin = self.rotary_emb(value_states, position_ids, seq_len=None)
+        cos, sin = self.rotary_embed(value_states, position_ids, seq_len=None)
         # [Batch_Size, Num_Heads_Q, Seq_Len, Head_Dim], [Batch_Size, Num_Heads_KV, Seq_Len, Head_Dim]
         query_states, key_states = apply_rotary_pos_embed(query_states, key_states, cos, sin)
 
@@ -302,7 +302,7 @@ class GemmaAttention(nn.Module):
         # Multiply by W_o. [Batch_Size, Seq_Len_Q, Hidden_Size]
         attn_output = self.o_proj(attn_output)
 
-        return attn_output 
+        return attn_output, attn_weights
 
 
 
@@ -495,7 +495,7 @@ class PaliGemmaForConditionalGeneration(nn.Module):
         # Shape: [Batch_Size, Seq_Len]. True for text tokens
         text_mask = (input_ids != self.config.image_token_index) & (input_ids != self.pad_token_id)
         # Shape: [Batch_Size, Seq_Len]. True for image tokens
-        image_mask = input_ids == self.config.imgae_token_index
+        image_mask = input_ids == self.config.image_token_index
         # Shape: [Batch_Size, Seq_Len]. True for padding tokens
         pad_mask = input_ids == self.config.pad_token_id
 
@@ -509,7 +509,7 @@ class PaliGemmaForConditionalGeneration(nn.Module):
         # Insert image embeddings. We can't use torch.where because the sequence length of scaled_image_features is not equal to the sequence length of the final embedding
         final_embedding = final_embedding.masked_scatter(image_mask_expanded, scaled_image_features)
         # Zero out padding tokens
-        final_embedding = final_embedding.where(pad_mask_expanded, torch.zeros_like(final_embedding), final_embedding)
+        final_embedding = torch.where(pad_mask_expanded, torch.zeros_like(final_embedding), final_embedding)
 
         #### CREATE THE ATTENTION MASK ####
         dtype, device = inputs_embeds.dtype, inputs_embeds.device
@@ -569,16 +569,16 @@ class PaliGemmaForConditionalGeneration(nn.Module):
 
         # 2. Merge text and images
         # [Batch_Size, Channels, H, W] -> [Batch_Size, Num_patches, Embed_Dim]
-        selected_image_features = self.vision_tower(pixel_values.to(input_embeds.dtype))
+        selected_image_features = self.vision_tower(pixel_values.to(inputs_embeds.dtype))
         # [Batch_Size, Num_Patches, Embed_Dim] -> [Batche_Size, Num_Patches, Hidden_Size]
         image_features = self.multimodal_projector(selected_image_features)
         # Merge the embeddings of the text tokens and the image tokens
-        input_embeds, attention_mask, position_ids = self._merge_input_ids_with_image_features(image_features, inputs_embeds, input_ids, attention_mask, kv_cache)
+        inputs_embeds, attention_mask, position_ids = self._merge_input_ids_with_image_features(image_features, inputs_embeds, input_ids, attention_mask, kv_cache)
 
         outputs = self.language_model(
             attention_mask = attention_mask,
             position_ids = position_ids,
-            input_embeds = input_embeds,
+            inputs_embeds = inputs_embeds,
             kv_cache = kv_cache,
         )
 

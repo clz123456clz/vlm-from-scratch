@@ -3,8 +3,8 @@ import numpy as np
 from PIL import Image
 import torch
 
-IMAGENET_STANDARD_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_TANDARD_STD = [0.229, 0.224, 0.225]
+IMAGENET_STANDARD_MEAN = [0.5, 0.5, 0.5]
+IMAGENET_TANDARD_STD = [0.5, 0.5, 0.5]
 
 def add_image_tokens_to_prompt(prefix_prompt, bos_token, image_seq_len, image_token):
     # Quoting from the blog (https://huggingface.co/blog/paligemma#detailed-inference-process):
@@ -83,16 +83,16 @@ class PaliGemmaProcessor:
         # Tokenizer described here: https://github.com/google-research/big_vision/blob/main/big_vision /configs/proj/paligemma/README.md#tokenizer
         tokens_to_add = {"additional_special_tokens": [self.IMAGE_TOKEN]}
         tokenizer.add_special_tokens(tokens_to_add)
-        EXTRA_TOKENS = {
-            f"<loc{i: 04d}>" for i in range(1024)
-        }   #These tokens are used for object detection (bounding boxes)
-        EXTRA_TOKENS += {
-            f"<seg{i: 03d}>" for i in range(128)
-        }   #These tokens are used for object segmentation
-        tokenizer.add_tokens(EXTRA_TOKENS)
+        # EXTRA_TOKENS = [
+        #     f"<loc{i:04d}>" for i in range(1024)
+        # ]   #These tokens are used for object detection (bounding boxes)
+        # EXTRA_TOKENS += [
+        #     f"<seg{i:03d}>" for i in range(128)
+        #    ]   #These tokens are used for object segmentation
+        # tokenizer.add_tokens(EXTRA_TOKENS)
         self.image_token_id = tokenizer.convert_tokens_to_ids(self.IMAGE_TOKEN)
         # Add the BOS and EOS ourselves
-        tokenizer.add_bos_token = False
+        tokenizer.add_bos_token = True
         tokenizer.add_eos_token = False
         self.tokenizer = tokenizer
 
@@ -124,7 +124,7 @@ class PaliGemmaProcessor:
             add_image_tokens_to_prompt(
                 prefix_prompt = prompt,
                 bos_token = self.tokenizer.bos_token,
-                image_seq_length = self.image_seq_length,
+                image_seq_len = self.image_seq_length,
                 image_token = self.IMAGE_TOKEN,
             ) 
             for prompt in text

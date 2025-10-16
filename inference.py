@@ -92,9 +92,12 @@ def test_inference(
 
     generated_tokens = torch.cat(generated_tokens, dim=-1)
     # Decode the generated tokens
-    decoded = processor.tokenizer.decode(generated_tokens, skip_special_tokens=True)
+    decoded = processor.tokenizer.decode(generated_tokens.flatten().tolist(), skip_special_tokens=True)
 
-    print(prompt + decoded)
+    with open("./inference_output.txt", "a", encoding="utf-8") as f:
+        f.write(f"Prompt: {prompt}\n")
+        f.write(f"Output: {decoded}\n")
+        f.write("="*50 + "\n")
 
 
 def main(
