@@ -1,7 +1,7 @@
 #!/bin/bash
 
 MODEL_PATH="$HOME/projects/paligemma-weights/paligemma-3b-pt-224"
-PROMPT="Describe what is in the image "
+PROMPT="Describe what is in the image"
 IMAGE_FILE_PATH="./test1.jpg"
 MAX_TOKENS_TO_GENERATE=100
 TEMPERATURE=0.8
